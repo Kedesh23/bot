@@ -1,6 +1,8 @@
 import os
+from os import getenv
 import telebot
 from dotenv import load_dotenv
+from read_db import get_data
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -86,11 +88,15 @@ def handle_simulator_selection(message):
 # Gestionnaire pour la cotisation mensuelle
 @bot.message_handler(
     func=lambda message: user_states.get(message.chat.id) == 'choosing_cotis_mensuelle')
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id) == 'choosing_cotis_mensuelle')
 def cotis_mensuelle(message):
-    cotis_mens = float(message.text)
-
-    bot.reply_to(message, "Entrez le premier versement libre.")
-    user_states[message.chat.id] = 'choosing_versement_libre'
+    try:
+        cotis_mens = float(message.text)
+        user_states[message.chat.id] = 'choosing_versement_libre'
+        user_states['cotis_mens'] = cotis_mens
+        bot.reply_to(message, "Entrez le premier versement libre.")
+    except ValueError:
+        bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
 
 # Gestionnaire de versement libre
@@ -101,7 +107,7 @@ def versement_libre(message):
         user_states[message.chat.id] = "choosing_frais_gestion"  # Change state to choosing frais de gestion
 
         bot.reply_to(message, "A quel frais de gestion ?\n" +
-                     "\n".join([f"{key}- {value}" for key, value in frais_gestion.items()]))
+                     "\n".join([f"{key}- {value * 100:.1f}" for key, value in frais_gestion.items()]))
     except ValueError:
         bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
@@ -111,9 +117,12 @@ def versement_libre(message):
 def frais_gestionnaire(message):
     try:
         fg = int(message.text)
-        user_states[message.chat.id]['frais_gestion'] = fg
 
         if fg in frais_gestion:
+            # Stocker les frais de gestion dans user_states
+            user_states[message.chat.id] = 'choosing_interet_technique'
+            user_states['fg'] = fg  # Enregistrez les frais de gestion ici
+
             bot.reply_to(message, "A quel taux d'intérêts techniques ?\n" +
                           "\n".join([f"{key}- {value * 100:.1f} %" for key, value in interet_tech.items()]))
         else:
@@ -122,14 +131,17 @@ def frais_gestionnaire(message):
         bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
 
+
 # Gestionnaire d'intérêts techniques
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == 'choosing_interet_technique')
-def interet_techniques(message):
+def interet_technique(message):
     try:
         t_it = int(message.text)
-        user_states[message.chat.id]['interet_tech'] = t_it
 
         if t_it in interet_tech:
+            # Stocker le taux d'intérêt technique dans user_states avec l'ID de l'utilisateur
+            user_states[message.chat.id] = "contribution"
+            user_states[message.chat.id] = {'t_it': t_it}  # Stocker correctement t_it pour cet utilisateur
             bot.reply_to(message, "Entrez la durée de cotisation 1")
         else:
             bot.reply_to(message, "Sélection invalide. Veuillez choisir un chiffre valide pour le taux d'intérêts technique.")
@@ -137,13 +149,13 @@ def interet_techniques(message):
         bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
 
+
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id) == "contribution")
 def contribution_period_one(message):
     try:
         duree_1 = int(message.text)
         if 1 <= duree_1 <= 40:
-            user_states[message.chat.id]['duree_1'] = duree_1  # Store the first duration
-            user_states[message.chat.id] = "contribution_two"  # Change state to contribution_two
+            user_states[message.chat.id] = "contribution_two"  # Changer l'état pour contribution_two
             bot.reply_to(message, "Entrez la durée de cotisation 2")
         else:
             bot.reply_to(message, "Entrez une durée entre 1 et 40")
@@ -156,8 +168,30 @@ def contribution_period_two(message):
     try:
         duree_2 = int(message.text)
         if 1 <= duree_2 <= 40:
-            user_states[message.chat.id] = duree_2  # Store the second duration
-            # Optionally, add the logic to handle what happens next
+            # Récupérer les données précédemment stockées par l'utilisateur
+            cotis_mens = float(user_states.get('cotis_mens', 0))
+            coti_libre = float(user_states.get('coti_libre', 0))
+            fg = frais_gestion.get(int(user_states.get('fg')))
+            t_it = interet_tech.get(int(user_states.get('t_it')))
+            duree_1 = int(user_states.get('duree_1'))
+
+            # Calcul des cotisations et du capital pour la première période
+            coti_total_1 = 12 * duree_1 * cotis_mens + coti_libre
+            capi_acquis_1 = cotis_mens * (1 - fg) + coti_libre * (1 + t_it) ** duree_1 * (1 - fg)
+            plus_value_1 = capi_acquis_1 - coti_total_1
+
+            # Calcul des cotisations et du capital pour la deuxième période
+            coti_total_2 = 12 * duree_2 * cotis_mens + coti_libre
+            capi_acquis_2 = cotis_mens * (1 - fg) + coti_libre * (1 + t_it) ** duree_2 * (1 - fg)
+            plus_value_2 = capi_acquis_2 - coti_total_2
+
+            # Réponse avec les résultats
+            bot.reply_to(message, f"Après {duree_1} année(s), vous aurez cotisé : {coti_total_1:.2f} F CFA\n"
+                                  f"Capital acquis : {capi_acquis_1:.2f} F CFA\n"
+                                  f"Plus-value : {plus_value_1:.2f} v\n\n"
+                                  f"Après {duree_2} année(s), vous aurez cotisé : {coti_total_2:.2f} F CFA\n"
+                                  f"Capital acquis : {capi_acquis_2:.2f} F CFA\n"
+                                  f"Plus-value : {plus_value_2:.2f} F CFA")
         else:
             bot.reply_to(message, "Entrez une durée entre 1 et 40")
     except ValueError:
