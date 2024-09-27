@@ -1,8 +1,7 @@
 import os
 import telebot
 from dotenv import load_dotenv
-
-# Charger les variables d'environnement
+from calcul import calculate_results
 load_dotenv()
 
 # Récupérer le token depuis les variables d'environnement
@@ -151,6 +150,7 @@ def contribution_period_one(message):
     except ValueError:
         bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
+
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'contribution_two')
 def contribution_period_two(message):
     try:
@@ -158,42 +158,26 @@ def contribution_period_two(message):
         if 1 <= duree_2 <= 40:
             user_states[message.chat.id]['duree_2'] = duree_2  # Stocker la deuxième durée
 
-            # Calcul des résultats
-            results = calculate_results(user_states[message.chat.id])
-            bot.reply_to(message, results)
+            # Vérification des données utilisateur avant d'appeler calculate_results
+            user_data = user_states[message.chat.id]
+            required_fields = ['cotis_mens', 'coti_libre', 'frais_gestion', 't_it', 'duree_1', 'duree_2']
+            if all(field in user_data for field in required_fields):
+                results = calculate_results(user_data)
 
+                # Vérifiez que results n'est pas None
+                if results:
+                    bot.reply_to(message, results['results_one'])
+                    bot.reply_to(message, results['results_two'])
+                else:
+                    bot.reply_to(message, "Une erreur s'est produite lors du calcul des résultats.")
+            else:
+                bot.reply_to(message, "Données manquantes. Veuillez vérifier que toutes les étapes ont été complétées.")
         else:
             bot.reply_to(message, "Entrez une durée entre 1 et 40")
     except ValueError:
         bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
-# Fonction pour effectuer les calculs
-def calculate_results(user_data):
-    cotis_mens = user_data['cotis_mens']
-    coti_libre = user_data['coti_libre']
-    frais_gestion = user_data['frais_gestion']
-    t_it = user_data['t_it']
-    duree_1 = user_data['duree_1']
-    duree_2 = user_data['duree_2']
 
-    # Calcul des cotisations totales
-    total_cotis = (cotis_mens * duree_1) + coti_libre
-
-    # Calcul des intérêts
-    rendement = total_cotis * t_it * (1 - frais_gestion)
-
-    # Résumé des résultats
-    results = (
-        f"**Récapitulatif de votre simulation :**\n"
-        f"1. Cotisation mensuelle : {cotis_mens:.2f} €\n"
-        f"2. Versement libre : {coti_libre:.2f} €\n"
-        f"3. Total des cotisations sur {duree_1} mois : {total_cotis:.2f} €\n"
-        f"4. Frais de gestion : {frais_gestion * 100:.2f} %\n"
-        f"5. Taux d'intérêt technique : {t_it * 100:.2f} %\n"
-        f"6. Rendement net après frais : {rendement:.2f} €\n"
-    )
-
-    return results
 
 # Lancer le bot
 bot.polling()
