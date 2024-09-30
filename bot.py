@@ -6,6 +6,8 @@ load_dotenv()
 
 # Récupérer le token depuis les variables d'environnement
 token = os.getenv("TOKEN")  # Assurez-vous d'avoir défini la variable d'environnement TOKEN
+path_file_pptx = os.getenv("PATH_FILE_PPTX")
+pdf_file_path = os.getenv("PATH_FILE_PDF")
 bot = telebot.TeleBot(token)
 
 # Dictionnaire pour stocker l'état des utilisateurs
@@ -168,6 +170,8 @@ def contribution_period_two(message):
                 if results:
                     bot.reply_to(message, results['results_one'])
                     bot.reply_to(message, results['results_two'])
+                    bot.send_message(message.chat.id,"Souhaitez-vous recevoir l'avis de situation en version PDF ? \n"
+                                                     "Répondez par 'oui' ou 'non'.")
                 else:
                     bot.reply_to(message, "Une erreur s'est produite lors du calcul des résultats.")
             else:
@@ -177,6 +181,27 @@ def contribution_period_two(message):
     except ValueError:
         bot.reply_to(message, "Veuillez entrer un nombre valide.")
 
+
+# Generateur de pdf
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'generateur_pdf')
+def pdf_generator(message):
+    response = message.text.lower()
+    if response in ['oui', 'yes']:
+        user_states[message.chat.id]['generateur_pdf'] = True
+        #pdf_file_path = "./docs/.pdf"  # Remplacez par le chemin réel de votre fichier PDF
+        try:
+            with open(pdf_file_path, 'rb') as pdf_file:
+                bot.send_document(message.chat.id, pdf_file)
+                bot.send_message(message.chat.id, "Votre avis de situation en PDF a été envoyé.")
+        except FileNotFoundError:
+            bot.send_message(message.chat.id, "Désolé, le fichier PDF n'a pas été trouvé.")
+    elif response in ['non', 'no']:
+        user_states[message.chat.id]['generateur_pdf'] = False
+        bot.send_message(message.chat.id, "NSIA vous remercie pour votre assurance.")
+    else:
+        bot.send_message(message.chat.id, "Veuillez répondre par 'oui' ou 'non'.")
+
+    bot.send_message(message.chat.id, "NSIA vous remercie pour votre confiance.")
 
 
 # Lancer le bot
