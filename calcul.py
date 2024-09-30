@@ -13,10 +13,13 @@ def calculate_results(user_data):
         col_duree_2 = "var" + str(duree_2)
 
         print(col_duree_1)
+        print(col_duree_2)
+        print(t_it)
 
         # Récupération des taux depuis la base de données
         table_taux_one = get_data(t_it, col_duree_1)
         table_taux_two = get_data(t_it, col_duree_2)
+        print(table_taux_one)
 
         # Vérifiez que les données sont valides avant les calculs
         if table_taux_one is None or table_taux_two is None:
