@@ -208,21 +208,28 @@ def pdf_generator(message):
             return
 
         # Vérification des résultats de calcul
-        capi_acquis = results.get('capi_acquis')
-        plus_value = results.get('plus_value')
-        if capi_acquis is None or plus_value is None:
-            bot.send_message(message.chat.id, "Erreur lors du calcul des résultats.")
-            return
+        required_keys = ['capi_acquis_one', 'plus_value_one', 'total_cotis_one',
+                         'capi_acquis_two', 'plus_value_two', 'total_cotis_two']
+
+        for key in required_keys:
+            if key not in results or results[key] is None:
+                bot.send_message(message.chat.id, f"Erreur lors du calcul des résultats : {key} est introuvable.")
+                return
 
         # Appeler la fonction pour générer le PDF
         pdf_file = convert(
-            duree1=user_data['duree_1'],
-            duree2=user_data['duree_2'],
-            versement=user_data['coti_libre'],
-            vers_mens=user_data['cotis_mens'],
-            cotis_total=40000,
-            cap_acquis=capi_acquis,
-            plus_value=plus_value,
+            duree1=results['duree_1'],
+            duree2=results['duree_2'],
+            versement=results['coti_libre'],
+            vers_mens=results['cotis_mens'],
+
+            cotis_total_one=results['total_cotis_one'],
+            cap_acquis_one=results['capi_acquis_one'],
+            plus_value_one=results['plus_value_one'],
+
+            cotis_total_two=results['total_cotis_two'],
+            cap_acquis_two=results['capi_acquis_two'],
+            plus_value_two=results['plus_value_two'],
         )
 
         # Vérifier si la génération du PDF a réussi

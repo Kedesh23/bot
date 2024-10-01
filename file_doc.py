@@ -9,7 +9,7 @@ path_file_doc = os.getenv("PATH_FILE_DOC", './doc/RETRAITE_PRESTIGE.docx')  # Ch
 pdf_file_path = os.getenv("PATH_FILE_PDF", './pdf/retraite_prestige.pdf')  # Chemin pour sauvegarder le PDF
 
 
-def convert(duree1, duree2, versement   , vers_mens, cotis_total, cap_acquis, plus_value):
+def convert(duree1, duree2, versement, vers_mens, cotis_total_one,cotis_total_two , cap_acquis_one,cap_acquis_two, plus_value_one, plus_value_two):
     try:
         # Vérifier que le fichier Word existe
         if not os.path.exists(path_file_doc):
@@ -22,19 +22,33 @@ def convert(duree1, duree2, versement   , vers_mens, cotis_total, cap_acquis, pl
         # Parcourir les paragraphes et remplacer les placeholders par les valeurs fournies
         for paragraph in doc.paragraphs:
             if "{{duree1}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{duree1}}", duree1)
+                paragraph.text = paragraph.text.replace("{{duree1}}", str(duree1))
             if "{{duree2}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{duree2}}", duree2)
-            if "{{versement1}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{versement1}}", versement)
-            if "{{verse_mens}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{verse_mens}}", vers_mens)
-            if "{{cotis_total}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{cotis_total}}", cotis_total)
-            if "{{cap_acquis}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{cap_acquis}}", cap_acquis)
-            if "{{plus_value}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{plus_value}}", plus_value)
+                paragraph.text = paragraph.text.replace("{{duree2}}", str(duree2))
+            if "{{versement}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{versement}}", str(versement))
+            if "{{vers_mens}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{vers_mens}}", str(vers_mens))
+
+            if "{{cotis_total_one}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{cotis_total_one}}", str(cotis_total_one))
+
+            if "{{cotis_total_two}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{cotis_total_two}}", str(cotis_total_two))
+
+
+            if "{{cap_acquis_one}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{cap_acquis_one}}", str(cap_acquis_one))
+
+            if "{{cap_acquis_two}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{cap_acquis_two}}", str(cap_acquis_two))
+
+            if "{{plus_value_one}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{plus_value_one}}", str(plus_value_one))
+
+            if "{{plus_value_two}}" in paragraph.text:
+                paragraph.text = paragraph.text.replace("{{plus_value_two}}", str(plus_value_two))
+
 
         # Sauvegarder le document modifié sous un nouveau nom
         output_word_file = './doc/retraite_prestige_modifie.docx'

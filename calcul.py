@@ -29,7 +29,7 @@ def calculate_results(user_data):
 
         # Calcul des cotisations totales 1
         total_cotis_one = 12 * duree_1 * cotis_mens + coti_libre
-        total_cotis_one_sep = f"{total_cotis_one:,.3}".replace(',', " ")
+        total_cotis_one_sep = f"{total_cotis_one:,.0}".replace(',', " ")
 
         # Calcul du capital acquis 1
         capi_acquis_one = table_taux_one * cotis_mens * (1 - fg) + coti_libre * (1 + t_it) ** duree_1 * (1 - fg)
@@ -72,11 +72,17 @@ def calculate_results(user_data):
 
             "duree_1": duree_1,
             "duree_2": duree_2,
-            "total_cotis": total_cotis_one,
-            "capi_acquis": capi_acquis_one,
-            "total_cotis": total_cotis_one,
-            "capi_acquis": capi_acquis_one,
-            "plus_value": plus_value_one,
+            "coti_libre": coti_libre,
+            "cotis_mens": cotis_mens,
+
+            "total_cotis_one": total_cotis_one,
+            "capi_acquis_one": capi_acquis_one,
+            "plus_value_one": plus_value_one,
+
+            "total_cotis_two": total_cotis_two,
+            "capi_acquis_two": capi_acquis_two,
+            "plus_value_two": plus_value_two,
+
         }
 
     except Exception as e:
