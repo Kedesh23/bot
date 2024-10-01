@@ -193,12 +193,25 @@ def pdf_generator(message):
 
     if response in ["oui", "yes"]:
         # Récupérer les données utilisateur pour générer le PDF
-        user_data = user_states[message.chat.id]
+        user_data = user_states.get(message.chat.id)
+
+        if not user_data:
+            bot.send_message(message.chat.id, "Erreur : données utilisateur introuvables.")
+            return
+
+        # Calculer les résultats
         results = calculate_results(user_data)
 
         # Vérifier que les résultats ne contiennent pas d'erreur
         if 'error' in results:
             bot.send_message(message.chat.id, results['error'])
+            return
+
+        # Vérification des résultats de calcul
+        capi_acquis = results.get('capi_acquis')
+        plus_value = results.get('plus_value')
+        if capi_acquis is None or plus_value is None:
+            bot.send_message(message.chat.id, "Erreur lors du calcul des résultats.")
             return
 
         # Appeler la fonction pour générer le PDF
@@ -207,13 +220,20 @@ def pdf_generator(message):
             duree2=user_data['duree_2'],
             versement=user_data['coti_libre'],
             vers_mens=user_data['cotis_mens'],
-            cap_acquis=results['capi_acquis'],
-            plus_value=results['plus_value'],
+            cotis_total=40000,
+            cap_acquis=capi_acquis,
+            plus_value=plus_value,
         )
+
+        # Vérifier si la génération du PDF a réussi
+        if pdf_file is None:
+            bot.send_message(message.chat.id, "Erreur lors de la génération du PDF.")
+            return
 
         # Envoyer le fichier PDF à l'utilisateur
         with open(pdf_file, 'rb') as pdf:
             bot.send_document(message.chat.id, pdf)
+
         bot.reply_to(message, "Votre avis de situation en PDF a été envoyé.")
 
     elif response in ['non', 'no']:

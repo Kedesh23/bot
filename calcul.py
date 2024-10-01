@@ -54,16 +54,16 @@ def calculate_results(user_data):
         # Formatage des résultats
         results_one = (
             f"Après {duree_1} années de cotisation, le client aura :\n\n"
-            f"Cotisé : {total_cotis_one_sep} F CFA\n"
-            f"Acquis au capital de : {capi_acquis_one_sep} F CFA\n"
-            f"Réalisé une plus-value de : {plus_value_one_sep} F CFA\n"
+            f"Cotisé : {total_cotis_one:.3} F CFA\n"
+            f"Acquis au capital de : {capi_acquis_one:.3} F CFA\n"
+            f"Réalisé une plus-value de : {plus_value_one:.3} F CFA\n"
         )
 
         results_two = (
             f"Après {duree_2} années de cotisation, le client aura :\n\n"
-            f"Cotisé : {total_cotis_two_sep} F CFA\n"
-            f"Acquis au capital de : {capi_acquis_two_sep} F CFA\n"
-            f"Réalisé une plus-value de : {plus_value_two_sep} F CFA\n"
+            f"Cotisé : {total_cotis_two:.3} F CFA\n"
+            f"Acquis au capital de : {capi_acquis_two:.3} F CFA\n"
+            f"Réalisé une plus-value de : {plus_value_two:.3} F CFA\n"
         )
 
         return {
