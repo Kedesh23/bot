@@ -3,6 +3,7 @@ import telebot
 from dotenv import load_dotenv
 from calcul import calculate_results
 from file_doc import convert
+from utils import format_separator
 load_dotenv()
 
 # Récupérer le token depuis les variables d'environnement

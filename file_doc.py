@@ -1,6 +1,7 @@
 from docx import Document
 import aspose.words as aw
 from dotenv import load_dotenv
+from utils import format_separator
 import os
 
 load_dotenv()
@@ -26,28 +27,28 @@ def convert(duree1, duree2, versement, vers_mens, cotis_total_one,cotis_total_tw
             if "{{duree2}}" in paragraph.text:
                 paragraph.text = paragraph.text.replace("{{duree2}}", str(duree2))
             if "{{versement}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{versement}}", str(versement))
+                paragraph.text = paragraph.text.replace("{{versement}}", format_separator(versement))
             if "{{vers_mens}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{vers_mens}}", str(vers_mens))
+                paragraph.text = paragraph.text.replace("{{vers_mens}}", format_separator(vers_mens))
 
             if "{{cotis_total_one}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{cotis_total_one}}", str(cotis_total_one))
+                paragraph.text = paragraph.text.replace("{{cotis_total_one}}", format_separator(cotis_total_one))
 
             if "{{cotis_total_two}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{cotis_total_two}}", str(cotis_total_two))
+                paragraph.text = paragraph.text.replace("{{cotis_total_two}}", format_separator(cotis_total_two))
 
 
             if "{{cap_acquis_one}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{cap_acquis_one}}", str(cap_acquis_one))
+                paragraph.text = paragraph.text.replace("{{cap_acquis_one}}", format_separator(cap_acquis_one))
 
             if "{{cap_acquis_two}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{cap_acquis_two}}", str(cap_acquis_two))
+                paragraph.text = paragraph.text.replace("{{cap_acquis_two}}", format_separator(cap_acquis_two))
 
             if "{{plus_value_one}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{plus_value_one}}", str(plus_value_one))
+                paragraph.text = paragraph.text.replace("{{plus_value_one}}", format_separator(plus_value_one))
 
             if "{{plus_value_two}}" in paragraph.text:
-                paragraph.text = paragraph.text.replace("{{plus_value_two}}", str(plus_value_two))
+                paragraph.text = paragraph.text.replace("{{plus_value_two}}", format_separator(plus_value_two))
 
 
         # Sauvegarder le document modifié sous un nouveau nom
