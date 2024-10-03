@@ -164,7 +164,19 @@ def calcul_prestation(user_data):
             f"Réalisé une plus-value de : {format_separator(plus_value_two)} F CFA\n"
         )
 
-        return {"results_one": results_one, "results_two": results_two}
+        return {"results_one": results_one,
+                "results_two": results_two,
+                'capi_souhaite': capi_souhaite,
+
+                'duree_1': duree_1,
+                'duree_2': duree_2,
+                'cotis_mens': cotis_mens,
+                'coti_mens_two': coti_mens_two,
+                'plus_value_one': plus_value_one,
+                'total_cotis_one': total_cotis_one,
+                'plus_value_two': plus_value_two,
+                'total_cotis_two': total_cotis_two
+                }
 
     except Exception as e:
         error_message = f"Erreur lors du calcul : {e}"

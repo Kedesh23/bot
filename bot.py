@@ -3,6 +3,7 @@ import telebot
 from dotenv import load_dotenv
 from calculation import calculate_results, calcul_prestation
 from contrib_period import handle_contribution_period
+from pdf_generate_pres import generate_and_send_pdf_prestige
 from utils import set_user_state, user_states, frais_gestion, validate_and_store_contribution_period, \
 handler_frais_gestion, handler_interet_technique, simulator
 from pdf_generate import generate_and_send_pdf
@@ -24,7 +25,6 @@ product = {
     3: "Emprunteur",
     4: "Epargne Plus"
 }
-
 
 
 
@@ -119,7 +119,6 @@ def contribution_period_two(message):
 
     # Appel à la fonction de calcul appropriée selon le simulateur choisi
     user_data = user_states.get(message.chat.id)
-    print(f"Données du User: {user_data}")
 
     if user_data['simulator'] == 'Cotisation definie':
         calculate_results(user_data)
@@ -133,6 +132,13 @@ def contribution_period_two(message):
 def pdf_generator(message):
     response = message.text.lower()
 
+    # Vérification de la variable simulator
+    simulator = user_states.get(message.chat.id, {}).get('simulator')
+    print(simulator)
+    if not simulator:
+        bot.send_message(message.chat.id, "Erreur : simulateur non défini.")
+        return
+
     if response in ["oui", "yes"]:
         # Récupérer les données utilisateur pour générer le PDF
         user_data = user_states.get(message.chat.id)
@@ -141,16 +147,22 @@ def pdf_generator(message):
             bot.send_message(message.chat.id, "Erreur : données utilisateur introuvables.")
             return
 
-        # Appeler la fonction réutilisable pour générer et envoyer le PDF
-        generate_and_send_pdf(bot, message.chat.id, user_data)
-
+        # Vérifier quel simulateur est utilisé
+        if simulator == "Cotisation definie":
+            generate_and_send_pdf(bot, message.chat.id, user_data)
+        elif simulator == "Prestation definie":
+            generate_and_send_pdf_prestige(bot, message.chat.id, user_data)
+        else:
+            bot.send_message(message.chat.id, "Erreur : simulateur inconnu.")
     elif response in ['non', 'no']:
         bot.send_message(message.chat.id, "NSIA vous remercie pour votre confiance.")
     else:
         bot.send_message(message.chat.id, "Veuillez répondre par 'oui' ou 'non'.")
 
-    # Terminer la conversation
-    bot.send_message(message.chat.id, "NSIA vous remercie pour votre confiance.")
+    # Terminer la conversation (ne pas répéter pour 'non')
+    if response not in ['non', 'no']:
+        bot.send_message(message.chat.id, "NSIA vous remercie pour votre confiance.")
+
 
 
 """
