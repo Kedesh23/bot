@@ -1,10 +1,14 @@
 import os
 import telebot
 from dotenv import load_dotenv
-from calcul import calculate_results
-from file_doc import convert
-from utils import format_separator
+from calculation import calculate_results, calcul_prestation
+from contrib_period import handle_contribution_period
+from utils import set_user_state, user_states, frais_gestion, validate_and_store_contribution_period, \
+handler_frais_gestion, handler_interet_technique, simulator
+from pdf_generate import generate_and_send_pdf
 load_dotenv()
+
+
 
 # Récupérer le token depuis les variables d'environnement
 token = os.getenv("TOKEN")  # Assurez-vous d'avoir défini la variable d'environnement TOKEN
@@ -12,8 +16,6 @@ path_file_pptx = os.getenv("PATH_FILE_PPTX")
 pdf_file_path = os.getenv("PATH_FILE_PDF")
 bot = telebot.TeleBot(token)
 
-# Dictionnaire pour stocker l'état des utilisateurs
-user_states = {}
 
 # Produits disponibles
 product = {
@@ -23,35 +25,8 @@ product = {
     4: "Epargne Plus"
 }
 
-# Simulateurs disponibles
-simulator = {
-    1: "Cotisation définie",
-    2: "Prestation définie"
-}
 
-# Frais de gestion
-frais_gestion = {
-    1: 0.05,
-    2: 0.045,
-    3: 0.04,
-    4: 0.035,
-    5: 0.03,
-    6: 0.025
-}
 
-# Taux d'intérêt technique
-interet_tech = {
-    1: 0.035,
-    2: 0.04,
-    3: 0.045,
-    4: 0.05
-}
-
-# Fonction pour définir l'état de l'utilisateur
-def set_user_state(chat_id, state):
-    if chat_id not in user_states:
-        user_states[chat_id] = {}  # Créez un dictionnaire vide si l'utilisateur n'existe pas
-    user_states[chat_id]['state'] = state
 
 # Début de la messagerie
 @bot.message_handler(commands=['start'])
@@ -67,13 +42,18 @@ def start_message(message):
 def handle_product_selection(message):
     selected_product = int(message.text)
 
-    if selected_product in product:
+    if selected_product == 1:
         bot.reply_to(message, "Souhaitez-vous faire une simulation sur la base d'une :\n" +
                      "\n".join([f"{key}- {value}" for key, value in simulator.items()]))
         set_user_state(message.chat.id, 'choosing_simulator')
     else:
         bot.reply_to(message, "Sélection invalide. Veuillez choisir un chiffre entre 1 et 4.")
 
+
+
+"""
+    Parcours Epargne  pour la cotisation définie
+"""
 # Gestionnaire pour la sélection du simulateur
 @bot.message_handler(
     func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'choosing_simulator' and message.text.isdigit())
@@ -81,8 +61,13 @@ def handle_simulator_selection(message):
     selected_simulator = int(message.text)
 
     if selected_simulator == 1:
+        user_states[message.chat.id]['simulator'] = 'Cotisation definie'  # Ajouter la clé pour Cotisation définie
         bot.reply_to(message, "Entrez la cotisation mensuelle.")
         set_user_state(message.chat.id, 'choosing_cotis_mensuelle')
+    elif selected_simulator == 2:
+        user_states[message.chat.id]['simulator'] = 'Prestation definie'  # Ajouter la clé pour Cotisation définie
+        bot.reply_to(message, "Entrez le capital souhaité.")
+        set_user_state(message.chat.id, "choosing_capital_souhaite")
     else:
         bot.reply_to(message, "Sélection invalide. Veuillez choisir un chiffre valide pour le simulateur.")
 
@@ -114,78 +99,34 @@ def versement_libre(message):
 # Gestionnaire frais de gestion
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'choosing_frais_gestion')
 def frais_gestionnaire(message):
-    try:
-        fg = int(message.text)
-
-        if fg in frais_gestion:
-            user_states[message.chat.id]['frais_gestion'] = frais_gestion[fg]  # Stocker les frais de gestion
-            set_user_state(message.chat.id, 'choosing_interet_technique')  # Changer l'état
-            bot.reply_to(message, "A quel taux d'intérêts techniques ?\n" +
-                          "\n".join([f"{key}- {value * 100:.1f} %" for key, value in interet_tech.items()]))
-        else:
-            bot.reply_to(message, "Sélection invalide. Veuillez choisir un chiffre valide pour les frais de gestion.")
-    except ValueError:
-        bot.reply_to(message, "Veuillez entrer un nombre valide.")
+    handler_frais_gestion(bot, message, 'choosing_interet_technique')
 
 # Gestionnaire d'intérêts techniques
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'choosing_interet_technique')
 def interet_technique(message):
-    try:
-        t_it = int(message.text)
-        if t_it in interet_tech:
-            user_states[message.chat.id]['t_it'] = interet_tech[t_it]  # Stocker le taux d'intérêt technique
-            set_user_state(message.chat.id, 'contribution')  # Changer l'état
-            bot.reply_to(message, "Entrez la durée de cotisation 1")
-        else:
-            bot.reply_to(message, "Sélection invalide. Veuillez choisir un chiffre valide pour le taux d'intérêts technique.")
-    except ValueError:
-        bot.reply_to(message, "Veuillez entrer un nombre valide.")
+    handler_interet_technique(bot, message, 'contribution')
 
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'contribution')
 def contribution_period_one(message):
-    try:
-        duree_1 = int(message.text)
-        if 1 <= duree_1 <= 40:
-            user_states[message.chat.id]['duree_1'] = duree_1  # Stocker la première durée
-            set_user_state(message.chat.id, 'contribution_two')  # Changer d'état
-            bot.reply_to(message, "Entrez la durée de cotisation 2")
-        else:
-            bot.reply_to(message, "Entrez une durée entre 1 et 40")
-    except ValueError:
-        bot.reply_to(message, "Veuillez entrer un nombre valide.")
+    handle_contribution_period(bot, message, 'contribution', 'duree_1', 'contribution_two')
 
 
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'contribution_two')
 # Après avoir calculé les résultats, demander si l'utilisateur souhaite recevoir un PDF
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'contribution_two')
 def contribution_period_two(message):
-    try:
-        duree_2 = int(message.text)
-        if 1 <= duree_2 <= 40:
-            user_states[message.chat.id]['duree_2'] = duree_2  # Stocker la deuxième durée
+    handle_contribution_period(bot, message, 'contribution_two', 'duree_2', "generateur_pdf", is_final=True)
 
-            # Vérification des données utilisateur avant d'appeler calculate_results
-            user_data = user_states[message.chat.id]
-            required_fields = ['cotis_mens', 'coti_libre', 'frais_gestion', 't_it', 'duree_1', 'duree_2']
-            if all(field in user_data for field in required_fields):
-                results = calculate_results(user_data)
+    # Appel à la fonction de calcul appropriée selon le simulateur choisi
+    user_data = user_states.get(message.chat.id)
+    print(f"Données du User: {user_data}")
 
-                # Vérifiez que results n'est pas None
-                if results:
-                    bot.reply_to(message, results['results_one'])
-                    bot.reply_to(message, results['results_two'])
-                    bot.send_message(message.chat.id, "Souhaitez-vous recevoir l'avis de situation en version PDF ? \n"
-                                                      "Répondez par 'oui' ou 'non'.")
-
-                    # Mettre à jour l'état pour attendre la réponse de l'utilisateur
-                    user_states[message.chat.id]['state'] = 'generateur_pdf'
-                else:
-                    bot.reply_to(message, "Une erreur s'est produite lors du calcul des résultats.")
-            else:
-                bot.reply_to(message, "Données manquantes. Veuillez vérifier que toutes les étapes ont été complétées.")
-        else:
-            bot.reply_to(message, "Entrez une durée entre 1 et 40")
-    except ValueError:
-        bot.reply_to(message, "Veuillez entrer un nombre valide.")
+    if user_data['simulator'] == 'Cotisation definie':
+        calculate_results(user_data)
+    elif user_data['simulator'] == "Prestation definie":
+        calcul_prestation(user_data)
+    else:
+        bot.send_message(message.chat.id,"Données manquantes. Veuillez vérifier que toutes les étapes ont été complétées.")
 
 
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == 'generateur_pdf')
@@ -200,58 +141,34 @@ def pdf_generator(message):
             bot.send_message(message.chat.id, "Erreur : données utilisateur introuvables.")
             return
 
-        # Calculer les résultats
-        results = calculate_results(user_data)
-
-        # Vérifier que les résultats ne contiennent pas d'erreur
-        if 'error' in results:
-            bot.send_message(message.chat.id, results['error'])
-            return
-
-        # Vérification des résultats de calcul
-        required_keys = ['capi_acquis_one', 'plus_value_one', 'total_cotis_one',
-                         'capi_acquis_two', 'plus_value_two', 'total_cotis_two']
-
-        for key in required_keys:
-            if key not in results or results[key] is None:
-                bot.send_message(message.chat.id, f"Erreur lors du calcul des résultats : {key} est introuvable.")
-                return
-
-        # Appeler la fonction pour générer le PDF
-        pdf_file = convert(
-            duree1=results['duree_1'],
-            duree2=results['duree_2'],
-            versement=results['coti_libre'],
-            vers_mens=results['cotis_mens'],
-
-            cotis_total_one=results['total_cotis_one'],
-            cap_acquis_one=results['capi_acquis_one'],
-            plus_value_one=results['plus_value_one'],
-
-            cotis_total_two=results['total_cotis_two'],
-            cap_acquis_two=results['capi_acquis_two'],
-            plus_value_two=results['plus_value_two'],
-        )
-
-        # Vérifier si la génération du PDF a réussi
-        if pdf_file is None:
-            bot.send_message(message.chat.id, "Erreur lors de la génération du PDF.")
-            return
-
-        # Envoyer le fichier PDF à l'utilisateur
-        with open(pdf_file, 'rb') as pdf:
-            bot.send_document(message.chat.id, pdf)
-
-        bot.reply_to(message, "Votre avis de situation en PDF a été envoyé.")
+        # Appeler la fonction réutilisable pour générer et envoyer le PDF
+        generate_and_send_pdf(bot, message.chat.id, user_data)
 
     elif response in ['non', 'no']:
         bot.send_message(message.chat.id, "NSIA vous remercie pour votre confiance.")
-
     else:
         bot.send_message(message.chat.id, "Veuillez répondre par 'oui' ou 'non'.")
 
     # Terminer la conversation
     bot.send_message(message.chat.id, "NSIA vous remercie pour votre confiance.")
+
+
+"""
+    Parcours Epargne pour la prestation définie
+"""
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('state') == "choosing_capital_souhaite")
+def capital_souhaite(message):
+    try:
+        capi_souhaite = float(message.text)
+        user_states[message.chat.id]['capi_souhaite'] = capi_souhaite  # Stocker le capital souhaité
+        set_user_state(message.chat.id, 'choosing_frais_gestion')  # Changer d'état
+        bot.reply_to(message, "A quel frais de gestion ?\n" +
+                     "\n".join([f"{key}- {value * 100:.1f} %" for key, value in frais_gestion.items()]))
+        set_user_state(message.chat.id, 'choosing_frais_gestion')  # Passer à l'étape suivante
+    except ValueError:
+        bot.reply_to(message, "Entrez un montant pour le capital souhaité.")
+
 
 
 # Lancer le bot
