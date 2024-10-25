@@ -32,7 +32,7 @@ def generate_and_send_pdf_prestige(bot, chat_id, user_data):
         duree1=results['duree_1'],
         duree2=results['duree_2'],
         coti_mens=results['cotis_mens'],
-    coti_mens_two = results['coti_mens_two'],
+        coti_mens_two = results['coti_mens_two'],
         capi_souhaite=results['capi_souhaite'],
 
         cotis_total_one=results['total_cotis_one'],
